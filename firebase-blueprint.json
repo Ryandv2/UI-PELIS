@@ -1,0 +1,75 @@
+{
+  "entities": {
+    "userProfile": {
+      "title": "Perfil de Usuario",
+      "description": "Contiene estadísticas de uso, límites y créditos del usuario.",
+      "type": "object",
+      "properties": {
+        "count": { "type": "number" },
+        "limit": { "type": "number" },
+        "lastReset": { "type": "string" },
+        "isUnlimited": { "type": "boolean" },
+        "extraCredits": { "type": "number" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "hasExhaustedInitial": { "type": "boolean" },
+        "updatedAt": { "type": "string" },
+        "username": { "type": "string" },
+        "bio": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "coverURL": { "type": "string" },
+        "createdAtDate": { "type": "string" },
+        "twitter": { "type": "string" },
+        "website": { "type": "string" }
+      },
+      "required": ["count", "limit", "lastReset", "isUnlimited", "extraCredits"]
+    },
+    "historyItem": {
+      "title": "Historial de Extracción",
+      "description": "Una búsqueda de extracción realizada por el usuario.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "targetUrl": { "type": "string" },
+        "title": { "type": "string" },
+        "date": { "type": "string" },
+        "embeds": {
+          "type": "array"
+        },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "targetUrl", "title", "date", "embeds"]
+    },
+    "supportTicket": {
+      "title": "Ticket de Soporte",
+      "description": "Incidencia de soporte técnico creada por el usuario.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "category": { "type": "string" },
+        "subject": { "type": "string" },
+        "message": { "type": "string" },
+        "status": { "type": "string", "enum": ["Abierto", "En Progreso", "Respondido"] },
+        "date": { "type": "string" },
+        "replies": { "type": "array" }
+      },
+      "required": ["id", "name", "email", "category", "subject", "message", "status", "date"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "userProfile",
+      "description": "Datos de límites y suscripción del usuario"
+    },
+    "/users/{userId}/history/{historyId}": {
+      "schema": "historyItem",
+      "description": "Historial de extracciones del usuario"
+    },
+    "/users/{userId}/tickets/{ticketId}": {
+      "schema": "supportTicket",
+      "description": "Tickets de soporte técnico generados por el usuario"
+    }
+  }
+}

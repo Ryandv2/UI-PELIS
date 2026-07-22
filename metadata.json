@@ -1,0 +1,6 @@
+{
+  "name": "Extractor de Enlaces Embed",
+  "description": "Herramienta profesional para extraer enlaces de reproductores embed e iframe de páginas de streaming, con control de límites y sistema de pagos simulado.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
