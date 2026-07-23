@@ -11,6 +11,7 @@ interface HostPattern {
 
 const STREAM_HOSTS: HostPattern[] = [
   { name: "Streamwish", pattern: /(streamwish|wishfast|strwish|swplayer|wsplayer)\.(com|to|net|org|xyz|link|pro|click|online)/i },
+  { name: "Vidhide", pattern: /(vidhide|vidhidepro|vidhidebin|vidthru|streamhide|megavid)\.(com|to|net|org|xyz|link|pro|click|cc|co|info|live)/i },
   { name: "Voe", pattern: /voe\.(sx|com|to|net|org|pro|xyz|link)/i },
   { name: "Streamtape", pattern: /streamtape\.(com|to|net|org|xyz|link|cc)/i },
   { name: "Mixdrop", pattern: /mixdrop\.(co|to|net|org|xyz|club|is)/i },
@@ -413,14 +414,39 @@ async function startServer() {
         
         if (cleaned.startsWith("http://") || cleaned.startsWith("https://")) {
           if (!foundUrls.has(cleaned)) {
-            foundUrls.add(cleaned);
-            const info = getLabelForDomain(cleaned);
-            embeds.push({
-              src: cleaned,
-              label: info.label,
-              domain: info.host,
-              type
-            });
+            // Check if it matches one of our defined video streaming hosts
+            let matchedHost = null;
+            let hostDomain = "";
+            try {
+              const urlObj = new URL(cleaned);
+              const hostname = urlObj.hostname;
+              for (const host of STREAM_HOSTS) {
+                if (host.pattern.test(hostname)) {
+                  matchedHost = host;
+                  hostDomain = hostname;
+                  break;
+                }
+              }
+            } catch {
+              for (const host of STREAM_HOSTS) {
+                if (host.pattern.test(cleaned)) {
+                  matchedHost = host;
+                  hostDomain = "streaming";
+                  break;
+                }
+              }
+            }
+
+            // Strictly only add if it matches a valid stream host (e.g. Streamwish, Vidhide, etc.)
+            if (matchedHost) {
+              foundUrls.add(cleaned);
+              embeds.push({
+                src: cleaned,
+                label: matchedHost.name,
+                domain: hostDomain || "streaming",
+                type
+              });
+            }
           }
         }
       };
