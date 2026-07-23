@@ -507,7 +507,7 @@ export default function UserProfile({ user, stats, onUpdateStats, onBackToExtrac
                       required
                       value={displayName} 
                       onChange={(e) => setDisplayName(e.target.value)} 
-                      placeholder="Ej. Bryan Narciso"
+                      placeholder="Ej. User Name"
                       className="w-full h-10 bg-neutral-950 border border-neutral-800 focus:border-emerald-500 focus:outline-none rounded-xl pl-9 pr-4 text-xs text-white placeholder-neutral-700 transition"
                     />
                     <UserIcon className="absolute left-3 top-3 w-4 h-4 text-neutral-500" />
@@ -523,11 +523,11 @@ export default function UserProfile({ user, stats, onUpdateStats, onBackToExtrac
                       type="text" 
                       value={username} 
                       onChange={(e) => setUsername(e.target.value.replace(/\s+/g, ''))} 
-                      placeholder="bryan_narciso"
+                      placeholder="user_name"
                       className="w-full h-10 bg-neutral-950 border border-neutral-800 focus:border-emerald-500 focus:outline-none rounded-xl pl-7 pr-4 text-xs text-white placeholder-neutral-700 transition font-mono"
                     />
                   </div>
-                  <p className="text-[9px] text-neutral-500">Solo letras, números y guión bajo. Sin espacios (Ej. bryan_123)</p>
+                  <p className="text-[9px] text-neutral-500">Solo letras, números y guión bajo. Sin espacios (Ej. user_123)</p>
                 </div>
 
                 {/* Cover Link (Optional Manual Input) */}
@@ -565,7 +565,7 @@ export default function UserProfile({ user, stats, onUpdateStats, onBackToExtrac
                       type="text" 
                       value={twitter} 
                       onChange={(e) => setTwitter(e.target.value)} 
-                      placeholder="bryan_twitter"
+                      placeholder="user_twitter"
                       className="w-full h-10 bg-neutral-950 border border-neutral-800 focus:border-emerald-500 focus:outline-none rounded-xl pl-9 pr-4 text-xs text-white placeholder-neutral-700 transition"
                     />
                     <Twitter className="absolute left-3 top-3 w-4 h-4 text-neutral-500" />
