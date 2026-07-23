@@ -17,8 +17,11 @@ import {
   CodeXml,
   RefreshCw,
   LifeBuoy,
-  Menu
+  Menu,
+  X
 } from 'lucide-react';
+
+import { motion, AnimatePresence } from 'motion/react';
 
 import { ScrapeResult, UsageStats, PaymentInvoice, ExtractedEmbed } from './types';
 import BillingModal from './components/BillingModal';
@@ -78,6 +81,16 @@ export default function App() {
 
   // Active workspace view state
   const [activeView, setActiveView] = useState<'extractor' | 'support' | 'profile'>('extractor');
+
+  // Beta version floating notice state (persisted)
+  const [showBetaNotice, setShowBetaNotice] = useState(() => {
+    return localStorage.getItem('hide_beta_notice') !== 'true';
+  });
+
+  const handleCloseBetaNotice = () => {
+    setShowBetaNotice(false);
+    localStorage.setItem('hide_beta_notice', 'true');
+  };
 
   // 1. Firebase Authentication & Cloud Storage Synchronizer
   useEffect(() => {
@@ -581,6 +594,37 @@ export default function App() {
         
         {/* Left Column: Input Form, Progress, Results, Technical Support, or User Profile */}
         <section className="lg:col-span-8 space-y-8 flex flex-col">
+          {!showBetaNotice && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-neutral-900/50 border border-emerald-500/10 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md transition-all"
+              id="persistent-beta-notice-banner"
+            >
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold rounded border border-emerald-500/20 shrink-0 animate-pulse">
+                  BETA
+                </div>
+                <div>
+                  <h4 className="text-white text-xs font-semibold">Canal Beta / Versión de Prueba</h4>
+                  <p className="text-neutral-400 text-[11px] mt-0.5 leading-relaxed">
+                    Si tienes algún inconveniente en la sección de <strong>perfiles</strong> o cualquier otra parte de la plataforma, ten en cuenta que esta es una versión beta de prueba. Estamos optimizando la base de datos de manera constante.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setActiveView('support');
+                  setIsSidebarOpen(false);
+                }}
+                className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer inline-flex items-center gap-1 shrink-0 self-end sm:self-center"
+                id="persistent-beta-support-link"
+              >
+                Reportar Detalle
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </motion.div>
+          )}
           {activeView === 'support' ? (
             <TechnicalSupport 
               onBackToExtractor={() => setActiveView('extractor')} 
@@ -795,6 +839,60 @@ export default function App() {
         onClose={() => setIsAuthModalOpen(false)}
         onContinueAsGuest={handleContinueAsGuest}
       />
+
+      {/* Floating Beta Notice Banner */}
+      <AnimatePresence>
+        {showBetaNotice && (
+          <motion.div
+            initial={{ opacity: 0, y: 30, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className="fixed bottom-6 right-6 left-6 sm:left-auto sm:w-96 z-50 bg-neutral-900/95 backdrop-blur-md border border-neutral-800 rounded-xl p-4 shadow-2xl flex flex-col gap-3"
+            id="beta-version-floating-notice"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold rounded-full border border-emerald-500/20">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                  </span>
+                  Versión Beta
+                </span>
+              </div>
+              <button
+                onClick={handleCloseBetaNotice}
+                className="p-1 text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800 rounded-lg transition-all cursor-pointer"
+                aria-label="Cerrar aviso"
+                id="close-beta-notice-btn"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-1">
+              <h4 className="text-white font-bold text-xs">Aviso de Versión Beta / De Prueba</h4>
+              <p className="text-neutral-400 text-[11px] leading-relaxed">
+                Si experimentas algún inconveniente al actualizar tu <strong>perfil</strong> o en cualquier otra sección de la plataforma, por favor recuerda que esta es una versión beta. Trabajamos de manera constante en la optimización de los servicios de almacenamiento.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between pt-1 border-t border-neutral-800/50 mt-1">
+              <button
+                onClick={() => {
+                  setActiveView('support');
+                  setIsSidebarOpen(false);
+                }}
+                className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer inline-flex items-center gap-1"
+              >
+                ¿Encontraste algún error? Contactar Soporte
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
