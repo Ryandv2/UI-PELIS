@@ -18,7 +18,7 @@ import {
   Search,
   CheckCircle2
 } from 'lucide-react';
-import { User } from 'firebase/auth';
+import { User, updateProfile } from 'firebase/auth';
 import { UsageStats } from '../types';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -79,30 +79,83 @@ export default function UserProfile({ user, stats, onUpdateStats, onBackToExtrac
     if (type === 'cover') setIsDragOverCover(false);
   };
 
-  // Convert File to Base64 helper
-  const processImageFile = (file: File, type: 'avatar' | 'cover') => {
+  // Helper to compress and resize images client-side using HTML5 Canvas
+  const compressAndResizeImage = (file: File, type: 'avatar' | 'cover'): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          // Ideal dimensions for avatars (160x160) and banners (800px width)
+          const maxDim = type === 'avatar' ? 160 : 800;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('No se pudo inicializar el contexto de imagen.'));
+            return;
+          }
+
+          // Fill solid background to avoid transparency issues during JPEG compression
+          ctx.fillStyle = type === 'avatar' ? '#ffffff' : '#0a0a0a';
+          ctx.fillRect(0, 0, width, height);
+
+          // Draw the image
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Output as highly optimized JPEG (75% quality), typical size is ~15KB - 40KB
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.75);
+          resolve(compressedBase64);
+        };
+        img.onerror = () => reject(new Error('Error al cargar el archivo de imagen.'));
+        img.src = event.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error('Error al leer el archivo de imagen.'));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Convert and Compress File helper
+  const processImageFile = async (file: File, type: 'avatar' | 'cover') => {
     if (!file.type.startsWith('image/')) {
       setError('Por favor selecciona únicamente archivos de imagen.');
       return;
     }
-    if (file.size > 2.5 * 1024 * 1024) {
-      setError('La imagen es demasiado grande. Selecciona un archivo menor a 2.5MB.');
-      return;
-    }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64 = reader.result as string;
-      if (type === 'avatar') {
-        setPhotoURL(base64);
-        setSuccess('¡Foto de perfil cargada temporalmente! Guarda los cambios para conservarla.');
-      } else {
-        setCoverURL(base64);
-        setSuccess('¡Banner de portada cargado temporalmente! Guarda los cambios para conservarlo.');
-      }
-    };
-    reader.readAsDataURL(file);
+    setIsSaving(true);
     setError(null);
+    setSuccess(null);
+
+    try {
+      const compressedBase64 = await compressAndResizeImage(file, type);
+      if (type === 'avatar') {
+        setPhotoURL(compressedBase64);
+        setSuccess('¡Foto de perfil optimizada y cargada temporalmente! Guarda los cambios para conservarla.');
+      } else {
+        setCoverURL(compressedBase64);
+        setSuccess('¡Banner de portada optimizado y cargado temporalmente! Guarda los cambios para conservarlo.');
+      }
+    } catch (err: any) {
+      console.error('Error compressing image:', err);
+      setError(err.message || 'No se pudo procesar la imagen. Por favor, intenta con otra.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Handle Drop
@@ -137,22 +190,40 @@ export default function UserProfile({ user, stats, onUpdateStats, onBackToExtrac
     setError(null);
     setSuccess(null);
 
-    if (username && !isValidUsername(username)) {
+    const cleanDisplayName = (displayName || '').trim();
+    const cleanUsername = (username || '').toLowerCase().trim();
+    const cleanBio = (bio || '').trim();
+    const cleanTwitter = (twitter || '').trim();
+    const cleanWebsite = (website || '').trim();
+
+    if (cleanUsername && !isValidUsername(cleanUsername)) {
       setError('El nombre de usuario debe tener entre 3 y 15 caracteres y solo contener letras, números y guión bajo (_).');
       return;
     }
 
     setIsSaving(true);
     try {
+      // 1. Update Firebase Auth Profile if possible
+      try {
+        await updateProfile(user, {
+          displayName: cleanDisplayName || 'Usuario',
+          photoURL: photoURL || null
+        });
+      } catch (authErr: any) {
+        console.warn("Could not sync Auth profile:", authErr);
+        // We continue anyway, because Firestore is the primary source of truth for custom profiles
+      }
+
+      // 2. Prepare Firestore document stats
       const updatedStats: UsageStats = {
         ...stats,
-        displayName: displayName || user.displayName || 'Usuario',
-        username: username.toLowerCase().trim(),
-        bio: bio.trim(),
-        photoURL,
-        coverURL,
-        twitter: twitter.trim(),
-        website: website.trim(),
+        displayName: cleanDisplayName || user.displayName || 'Usuario',
+        username: cleanUsername,
+        bio: cleanBio,
+        photoURL: photoURL || '',
+        coverURL: coverURL || '',
+        twitter: cleanTwitter,
+        website: cleanWebsite,
         updatedAt: new Date().toISOString()
       };
 
@@ -164,12 +235,17 @@ export default function UserProfile({ user, stats, onUpdateStats, onBackToExtrac
         });
       }
 
-      await onUpdateStats(updatedStats);
+      // 3. Sanitize all properties to avoid any 'undefined' field errors in Firestore
+      const sanitizedStats: UsageStats = JSON.parse(JSON.stringify(updatedStats));
+
+      // 4. Update stats state and Firestore via parent callback
+      await onUpdateStats(sanitizedStats);
+      
       setIsEditing(false);
-      setSuccess('¡Tu hermoso perfil se ha actualizado y guardado correctamente!');
+      setSuccess('¡Tu perfil se ha actualizado y guardado correctamente en la base de datos!');
     } catch (err: any) {
-      console.error(err);
-      setError('No se pudo guardar la información de perfil. Inténtalo de nuevo.');
+      console.error("Firestore Save Error in UserProfile:", err);
+      setError(`Error al guardar: ${err.message || err.code || 'Inténtalo de nuevo.'}`);
     } finally {
       setIsSaving(false);
     }

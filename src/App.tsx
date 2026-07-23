@@ -410,7 +410,8 @@ export default function App() {
           await setDoc(docRef, newResult);
           
           // Write profile/stats
-          await setDoc(doc(db, 'users', user.uid), currentStats);
+          const cleanStats = JSON.parse(JSON.stringify(currentStats));
+          await setDoc(doc(db, 'users', user.uid), cleanStats);
         } catch (error) {
           console.error("Error writing to Firestore:", error);
         }
@@ -590,10 +591,11 @@ export default function App() {
               user={user}
               stats={stats}
               onUpdateStats={async (newStats) => {
-                setStats(newStats);
-                localStorage.setItem('embed_scraper_stats', JSON.stringify(newStats));
+                const cleanStats = JSON.parse(JSON.stringify(newStats));
+                setStats(cleanStats);
+                localStorage.setItem('embed_scraper_stats', JSON.stringify(cleanStats));
                 const userDocRef = doc(db, 'users', user.uid);
-                await setDoc(userDocRef, newStats, { merge: true });
+                await setDoc(userDocRef, cleanStats, { merge: true });
               }}
               onBackToExtractor={() => setActiveView('extractor')}
             />
