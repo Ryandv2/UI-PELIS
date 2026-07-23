@@ -90,20 +90,37 @@ export default function UserProfile({ user, stats, onUpdateStats, onBackToExtrac
           let width = img.width;
           let height = img.height;
 
-          // Ideal dimensions for avatars (160x160) and banners (800px width)
-          const maxDim = type === 'avatar' ? 160 : 800;
-          if (width > maxDim || height > maxDim) {
-            if (width > height) {
-              height = Math.round((height * maxDim) / width);
-              width = maxDim;
-            } else {
-              width = Math.round((width * maxDim) / height);
-              height = maxDim;
+          // Ideal dimensions for avatars (150x150) and horizontal banners (800x220)
+          let targetWidth = width;
+          let targetHeight = height;
+
+          if (type === 'avatar') {
+            const maxDim = 150;
+            if (width > maxDim || height > maxDim) {
+              if (width > height) {
+                targetHeight = Math.round((height * maxDim) / width);
+                targetWidth = maxDim;
+              } else {
+                targetWidth = Math.round((width * maxDim) / height);
+                targetHeight = maxDim;
+              }
+            }
+          } else {
+            // For cover banner: enforce standard landscape dimensions (800x220 max)
+            const maxWidth = 800;
+            const maxHeight = 220;
+            if (width > maxWidth) {
+              targetHeight = Math.round((height * maxWidth) / width);
+              targetWidth = maxWidth;
+            }
+            if (targetHeight > maxHeight) {
+              targetWidth = Math.round((targetWidth * maxHeight) / targetHeight);
+              targetHeight = maxHeight;
             }
           }
 
-          canvas.width = width;
-          canvas.height = height;
+          canvas.width = targetWidth;
+          canvas.height = targetHeight;
 
           const ctx = canvas.getContext('2d');
           if (!ctx) {
@@ -113,13 +130,13 @@ export default function UserProfile({ user, stats, onUpdateStats, onBackToExtrac
 
           // Fill solid background to avoid transparency issues during JPEG compression
           ctx.fillStyle = type === 'avatar' ? '#ffffff' : '#0a0a0a';
-          ctx.fillRect(0, 0, width, height);
+          ctx.fillRect(0, 0, targetWidth, targetHeight);
 
           // Draw the image
-          ctx.drawImage(img, 0, 0, width, height);
+          ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
-          // Output as highly optimized JPEG (75% quality), typical size is ~15KB - 40KB
-          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.75);
+          // Output as highly optimized JPEG (70% quality), typical size is ~5KB - 25KB
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.70);
           resolve(compressedBase64);
         };
         img.onerror = () => reject(new Error('Error al cargar el archivo de imagen.'));
